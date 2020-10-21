@@ -88,4 +88,13 @@ def TCF_MatmulOp : TCF_Op<"matmul"> {
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` functional-type(operands, results)";
 }
 
+def TCF_IdentityOp : UnaryArithmeticOp<"identity"> {
+  let summary = "Example identify operation (input = output)";
+  let description = [{
+    Simple Identity operation to serve as an example for how to write and use an Operation.
+
+    1 * x = x
+  }];
+}
+
 #endif // #ifndef TCF_OPS
