@@ -50,14 +50,28 @@ function npcomp_docker_login() {
 # matching the host user and a home directory that mirrors that on the host.
 function npcomp_docker_build_for_me() {
   local root_image="$1"
-  echo "
-    FROM $root_image
 
-    USER root
-    RUN apt install -y sudo byobu git procps lsb-release
-    RUN addgroup --gid $(id -g $USER) $USER
-    RUN mkdir -p $(dirname $HOME) && useradd -m -d $HOME --gid $(id -g $USER) --uid $(id -u $USER) $USER
-    RUN echo '$USER ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
-    USER $USER
-  " | docker build --tag me/${root_image} -
+  if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo "
+      FROM $root_image
+
+      USER root
+      RUN apt install -y sudo byobu git procps lsb-release
+      RUN mkdir -p $(dirname $HOME) && useradd -m -d $HOME --gid $(id -g $USER) --uid $(id -u $USER) $USER
+      RUN echo '$USER ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+      USER $USER
+    " | docker build --tag me/${root_image} -
+  else:
+    echo "WHY ARE WE HERE"
+    echo "
+      FROM $root_image
+
+      USER root
+      RUN apt install -y sudo byobu git procps lsb-release
+      RUN addgroup --gid $(id -g $USER) $USER
+      RUN mkdir -p $(dirname $HOME) && useradd -m -d $HOME --gid $(id -g $USER) --uid $(id -u $USER) $USER
+      RUN echo '$USER ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers
+      USER $USER
+    " | docker build --tag me/${root_image} -
+  fi
 }
