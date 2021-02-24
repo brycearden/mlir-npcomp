@@ -56,8 +56,3 @@ func @multiple_blocks(%arg0: memref<?xf32>) -> memref<?xf32> {
 // -----
 
 // Test diagnostics.
-
-// expected-error @+1 {{func not expressible with refbackrt ABI}}
-func @unhandled_abi_type_on_public_func(%arg0: i32) {
-  return
-}

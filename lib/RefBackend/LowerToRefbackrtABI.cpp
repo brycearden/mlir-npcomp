@@ -38,7 +38,9 @@ static bool expressibleWithRefbackrtABI(FunctionType type) {
   // Currently, only memref types can be exposed at refbackrt ABI boundaries.
   return llvm::all_of(
       llvm::concat<const Type>(type.getInputs(), type.getResults()),
-      [](Type t) { return t.isa<MemRefType>(); });
+      [](Type t) {
+        return t.isa<MemRefType>() || t.isa<IntegerType>();
+      });
 }
 
 static LogicalResult createModuleMetadata(ModuleOp module) {
