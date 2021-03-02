@@ -8,6 +8,7 @@
 #include "node_importer.h"
 
 #include <unordered_map>
+#include <iostream>
 
 #include "mlir_utils.h"
 #include "op_builder.h"
@@ -176,6 +177,27 @@ void NodeImporter::importPrimNode(Node *node, MlirBlock appendToBlock) {
     return;
   }
 
+  // if (kind == c10::prim::ListUnpack) {
+  //   MlirOperation operation = 
+  //       createMlirOperationAtEnd(appendToBlock, "torch.prim.ListUnpack", loc,
+  //                                getMlirTypesFromValues(loc, node->outputs()),
+  //                                lookupMappedValues(node->inputs()));
+  //   return;
+  // }
+
+  if (kind == c10::prim::TupleUnpack) {
+    auto mlirTypes = getMlirTypesFromValues(loc, node->outputs());
+    auto mappedValues = lookupMappedValues(node->inputs());
+    std::cout << "num_inputs: " << node->inputs().size() << std::endl;
+    std::cout << "input: " << node->inputs()[0]->debugName() << std::endl;
+    std::cout << "num_outputs: " << node->outputs().size() << std::endl;
+    // MlirOperation operation = 
+    //     createMlirOperationAtEnd(appendToBlock, "torch.prim.TupleUnpack", loc,
+    //                              getMlirTypesFromValues(loc, node->outputs()),
+    //                              lookupMappedValues(node->inputs()));
+    return;
+  }
+
   // Unhandled.
   {
     std::stringstream msg;
@@ -240,6 +262,7 @@ MlirBlock NodeImporter::createBlockFor(Block *jitBlock) {
   std::vector<MlirType> blockArgTypes =
       getMlirTypesFromValues(loc, paramNode->outputs());
   MlirBlock block = mlirBlockCreate(blockArgTypes.size(), blockArgTypes.data());
+  std::cout << "mlirBlockGetNumArguments(block):" << mlirBlockGetNumArguments(block) << std::endl;
   for (int i = 0, e = mlirBlockGetNumArguments(block); i < e; i++) {
     Value *jitValue = paramNode->outputs()[i];
     MlirValue value = mlirBlockGetArgument(block, i);
@@ -252,6 +275,7 @@ void NodeImporter::mapValue(Value *jitValue, MlirValue value) {
   auto it = valueMap.find(jitValue);
   (void)it;
   assert(it == valueMap.end() && "jitValue has already been mapped");
+  std::cout << "mapping value: " << jitValue->debugName() << std::endl;
   valueMap[jitValue] = value;
 }
 void NodeImporter::mapResults(Node *node, MlirOperation operation) {
@@ -263,6 +287,8 @@ void NodeImporter::mapResults(Node *node, MlirOperation operation) {
 }
 MlirValue NodeImporter::lookupMappedValue(Value *jitValue) {
   auto it = valueMap.find(jitValue);
+  std::cout << "finding jitValue: " << jitValue->debugName() << std::endl;
+  std::cout << "jitValue Type: " << jitValue->type()->str() << std::endl;
   assert(it != valueMap.end() &&
          "trying to get mapping for jitValue that is not mapped yet!");
   return it->second;

@@ -9,6 +9,7 @@
 #include "ivalue_importer.h"
 
 #include <unordered_map>
+#include <iostream>
 
 #include "mlir_utils.h"
 
@@ -120,6 +121,7 @@ MlirType TypeMapper::mapFromTorchType(MlirLocation loc,
             loc, torchType->cast<c10::OptionalType>()->getElementType()));
   }
   case TypeKind::IntType: {
+    std::cout << "we are converting an IntType." << std::endl;
     return mlirIntegerTypeGet(context, 64);
   }
   case TypeKind::NoneType: {
@@ -134,6 +136,7 @@ MlirType TypeMapper::mapFromTorchType(MlirLocation loc,
   }
   case TypeKind::TupleType: {
     // TODO: Don't lose the element type information.
+    std::cout << "we are converting a TupleType." << std::endl;
     return npcompTupleTypeGet(context);
   }
   default: {

@@ -388,4 +388,26 @@ def Torch_PrimNumToTensorOp : Torch_Op<"prim.NumToTensor", []> {
   }];
 }
 
+def Torch_PrimListUnpackOp: Torch_Op<"prim.ListUnpack", []> {
+  let summary = "TorchScript prim::ListUnpack op";
+
+  let arguments = (ins AnyTorchType:$operand);
+  let results = (outs Variadic<AnyTorchTensorType>:$results);
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `->` type($results)
+  }];
+}
+
+def Torch_PrimTupleUnpackOp: Torch_Op<"prim.TupleUnpack", []> {
+  let summary = "TorchScript prim::TupleUnpack op";
+
+  let arguments = (ins AnyTorchType:$operand);
+  let results = (outs Variadic<AnyTorchTensorType>:$results);
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `->` type($results)
+  }];
+}
+
 #endif // TORCH_OPS
