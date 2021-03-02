@@ -22,6 +22,7 @@ using llvm::Twine;
 using refback::JITModule;
 using refbackrt::Ref;
 using refbackrt::Tensor;
+using refbackrt::RuntimeValue;
 
 template <typename T>
 static T checkError(llvm::Expected<T> &&expected, Twine banner = {}) {
@@ -106,18 +107,18 @@ void npcomp::python::defineBackendRefJitModule(py::module &m) {
           [](JITModule &self, std::string functionName,
              std::vector<py::buffer> inputs) {
             // Prepare inputs.
-            llvm::SmallVector<Ref<Tensor>, 4> inputTensors;
+            llvm::SmallVector<RuntimeValue, 4> inputTensors;
             inputTensors.reserve(inputs.size());
             for (py::buffer &inputBuffer : inputs) {
-              inputTensors.push_back(copyBufferToTensor(inputBuffer));
+              inputTensors.push_back(RuntimeValue(copyBufferToTensor(inputBuffer)));
             }
 
             auto outputs = checkError(self.invoke(functionName, inputTensors),
                                       "error invoking JIT function: ");
             std::vector<py::array> outputArrays;
             outputArrays.reserve(outputs.size());
-            for (Ref<Tensor> &outputTensor : outputs) {
-              outputArrays.push_back(wrapTensorAsArray(outputTensor));
+            for (RuntimeValue &outputValue : outputs) {
+              outputArrays.push_back(wrapTensorAsArray(outputValue.toRefTensor()));
             }
             return outputArrays;
           },

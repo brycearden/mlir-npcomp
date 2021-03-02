@@ -150,6 +150,92 @@ private:
   // Sizes are tail-allocated.
 };
 
+// A Tagged Union over the type(s) supported by the npcomp Runtime
+// A Runtime Value contains their value as a RuntimeValue::Payload, which holds
+// primitive types (int64_t, bool, double) and all other types as Ref<T> to indicate 
+// that they are being reference counted...
+// 
+// TODO(brycearden): Is an intrusive_ptr API desired here for non-primitive types?
+class RuntimeValue {
+public:
+
+  RuntimeValue() : payload{0}, tag{Tag::kNone} {}
+
+  RuntimeValue(bool b) : tag(Tag::kBool) {
+    payload.asBool = b;
+  }
+
+  RuntimeValue(int64_t i) : tag(Tag::kInt) {
+    payload.asInt = i;
+  }
+
+  RuntimeValue(double d) : tag(Tag::kDouble) {
+    payload.asDouble = d;
+  }
+
+  RuntimeValue(Ref<Tensor>& refTensor) : tag(Tag::kRefTensor) {
+    payload.asPtr.refTensor = &refTensor;
+  }
+
+  RuntimeValue(Ref<Tensor>&& refTensor) : tag(Tag::kRefTensor) {
+    payload.asPtr.refTensor = std::move(&refTensor);
+  }
+
+  bool isBool() const { return tag == Tag::kBool; }
+  bool isInt() const { return tag == Tag::kInt; }
+  bool isDouble() const { return tag == Tag::kDouble; }
+  bool isRefTensor() const { return tag == Tag::kRefTensor; } 
+
+  bool toBool() const { 
+    assert(isBool() && "Cannot convert RuntimeValue to a bool");
+    return payload.asBool;
+  }
+  double toDouble() const { 
+    assert(isDouble() && "Cannot convert RuntimeValue to double");
+    return payload.asBool;
+  }
+  Ref<Tensor> toRefTensor() const { 
+    assert(isRefTensor() && "Cannot convert RuntimeValue to Tensor");
+    // TODO: remove deep copy here
+    return *payload.asPtr.refTensor;
+  }
+
+  RuntimeValue& toRuntimeValue() {
+    return *this;
+  }
+
+  const RuntimeValue& toRuntimeValue() const {
+    return *this;
+  }
+
+private:
+  // NOTE: RuntimeValue tags are kept private for now since they should only be 
+  // set at construction.
+  enum class Tag {
+    kNone,
+    kBool,
+    kInt,
+    kDouble,
+    kRefTensor,
+  };
+
+  union PayloadPtr {
+    // Tensor* tensor;
+    Ref<Tensor>* refTensor;
+    void* none;
+  };
+  
+  union Payload {
+    std::int64_t asInt;
+    double asDouble;
+    bool asBool;
+    PayloadPtr asPtr;
+  };
+
+  RuntimeValue::Payload payload;
+  RuntimeValue::Tag tag;
+};
+
 //===----------------------------------------------------------------------===//
 // Module loading.
 // This is the main entry point that users interact with.
@@ -171,8 +257,10 @@ constexpr static int kMaxArity = 20;
 
 // Low-level invocation API. The number of inputs and outputs should be correct
 // and match the results of getMetadata.
+// void invoke(ModuleDescriptor *moduleDescriptor, StringRef functionName,
+//             ArrayRef<Ref<Tensor>> inputs, MutableArrayRef<Ref<Tensor>> outputs);
 void invoke(ModuleDescriptor *moduleDescriptor, StringRef functionName,
-            ArrayRef<Ref<Tensor>> inputs, MutableArrayRef<Ref<Tensor>> outputs);
+            ArrayRef<RuntimeValue> inputs, MutableArrayRef<RuntimeValue> outputs);
 
 // Metadata for function `functionName`.
 //
