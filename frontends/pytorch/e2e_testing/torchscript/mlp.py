@@ -28,7 +28,7 @@ class Mlp1LayerModule(torch.nn.Module):
     def forward(self, x):
         return self.tanh0(self.fc0(x))
 
-@register_test_case(module_factory=lambda: Mlp1LayerModule())
+# @register_test_case(module_factory=lambda: Mlp1LayerModule())
 def Mlp1LayerModule_basic(module, tu: TestUtils):
     module.forward(tu.rand(5, 3))
 
@@ -52,6 +52,6 @@ class Mlp2LayerModule(torch.nn.Module):
         x = self.tanh1(self.fc1(x))
         return x
 
-@register_test_case(module_factory=lambda: Mlp2LayerModule())
+# @register_test_case(module_factory=lambda: Mlp2LayerModule())
 def Mlp2LayerModule_basic(module, tu: TestUtils):
     module.forward(tu.rand(5, 3))

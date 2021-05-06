@@ -26,6 +26,6 @@ class ResNet18Module(torch.nn.Module):
     def forward(self, img):
         return self.resnet.forward(img)
 
-@register_test_case(module_factory=lambda: ResNet18Module())
+# @register_test_case(module_factory=lambda: ResNet18Module())
 def ResNet18Module_basic(module, tu: TestUtils):
     module.forward(tu.rand(1, 3, 224, 224))

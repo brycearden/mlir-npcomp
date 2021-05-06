@@ -11,7 +11,7 @@ include_directories(BEFORE
 link_directories("${TORCH_INSTALL_PREFIX}/lib")
 
 add_library(NPCOMPTorchMLIRExt SHARED
-  builder/acap_dispatch.cpp
+  # builder/acap_dispatch.cpp
   builder/class_annotator.cpp
   builder/debug.cpp
   builder/func_builder.cpp

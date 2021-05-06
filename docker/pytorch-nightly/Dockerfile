@@ -3,13 +3,13 @@ MAINTAINER Stella Laurenzo <stellaraccident@gmail.com>
 
 USER root
 ENV DEBIAN_FRONTEND=noninteractive
-RUN apt update
+RUN apt-get update
 
 # Python and build system.
-RUN apt install -y python3 python-is-python3
-RUN apt install -y python3-pip 
-RUN apt install -y git cmake ccache ninja-build
-RUN apt install -y clang lld
+RUN apt install --fix-missing -y python3 python-is-python3
+RUN apt install --fix-missing -y python3-pip
+RUN apt install --fix-missing -y git cmake ccache ninja-build
+RUN apt install --fix-missing -y clang lld
 RUN ln -s /usr/bin/llvm-symbolizer-10 /usr/bin/llvm-symbolizer
 
 # Install PyTorch
