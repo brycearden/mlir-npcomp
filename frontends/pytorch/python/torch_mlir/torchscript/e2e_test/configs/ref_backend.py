@@ -54,8 +54,10 @@ Diagnostics:
                 large_elements_limit=10, enable_debug_info=True)
             pipeline_str = "torchscript-to-npcomp-backend-pipeline"
             # Lower module in place to make it ready for compiler backends.
+            mb.module.context.enable_multithreading(False)
             with mb.module.context:
                 pm = PassManager.parse(pipeline_str)
+                pm.enable_ir_printing()
                 pm.run(mb.module)
         except Exception as e:
             # TODO: More robust.
