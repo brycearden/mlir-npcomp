@@ -23,9 +23,9 @@ from torch_mlir.torchscript.e2e_test.configs import (
 # be run from a specific directory.
 # TODO: Find out best practices for python "main" files.
 import basic
-import vision_models
-import mlp
-import quantized_models
+#import vision_models
+#import mlp
+#import quantized_models
 
 def _get_argparse():
     parser = argparse.ArgumentParser(description='Run torchscript e2e tests.')
