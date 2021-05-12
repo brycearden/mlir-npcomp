@@ -16,8 +16,8 @@ class MmModule(torch.nn.Module):
     @export
     @annotate_args([
         None,
-        ([-1, -1], torch.float32),
-        ([-1, -1], torch.float32),
+        ([4, 4], torch.float32),
+        ([4, 4], torch.float32),
     ])
     def forward(self, lhs, rhs):
         return torch.mm(lhs, rhs)
