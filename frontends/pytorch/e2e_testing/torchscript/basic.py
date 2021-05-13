@@ -9,23 +9,45 @@ from torch_mlir.torchscript.e2e_test.registry import register_test_case
 from torch_mlir.torchscript.annotations import annotate_args, export
 
 # ==============================================================================
-
-class MmModule(torch.nn.Module):
+class Conv2dModule(torch.nn.Module):
     def __init__(self):
         super().__init__()
+        self.conv = torch.nn.Conv2d(
+                in_channels = 4,
+                out_channels = 4,
+                kernel_size = (3, 3),
+                bias = False,
+                )
     @export
     @annotate_args([
         None,
-        ([4, 4], torch.float32),
-        ([4, 4], torch.float32),
+        ([1, 4, 7, 7], torch.float32),
     ])
-    def forward(self, lhs, rhs):
-        return torch.mm(lhs, rhs)
+    def forward(self, x):
+        return self.conv(x)
 
-@register_test_case(module_factory=lambda: MmModule())
-def MmModule_basic(module, tu: TestUtils):
-    module.forward(tu.rand(4, 4), tu.rand(4, 4))
+@register_test_case(module_factory=lambda: Conv2dModule())
+def ConvModule_basic(module, tu: TestUtils):
+    module.forward(tu.rand((1,4,7,7)))
 
+# ==============================================================================
+#
+#class MmModule(torch.nn.Module):
+#    def __init__(self):
+#        super().__init__()
+#    @export
+#    @annotate_args([
+#        None,
+#        ([4, 4], torch.float32),
+#        ([4, 4], torch.float32),
+#    ])
+#    def forward(self, lhs, rhs):
+#        return torch.mm(lhs, rhs)
+#
+#@register_test_case(module_factory=lambda: MmModule())
+#def MmModule_basic(module, tu: TestUtils):
+#    module.forward(tu.rand(4, 4), tu.rand(4, 4))
+#
 #@register_test_case(module_factory=lambda: MmModule())
 #def MmModule_chained(module, tu: TestUtils):
 #    res = module.forward(tu.rand(4, 4), tu.rand(4, 4))
