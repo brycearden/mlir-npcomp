@@ -16,7 +16,7 @@ class Conv2dModule(torch.nn.Module):
                 in_channels = 4,
                 out_channels = 4,
                 kernel_size = (3, 3),
-                bias = False,
+                bias = True,
                 )
     @export
     @annotate_args([
