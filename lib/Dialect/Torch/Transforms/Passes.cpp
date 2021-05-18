@@ -13,6 +13,7 @@
 #include "npcomp/Backend/Common/Passes.h"
 #include "npcomp/Conversion/TorchToLinalg/TorchToLinalg.h"
 #include "npcomp/Conversion/TorchToStd/TorchToStd.h"
+#include "npcomp/Conversion/TCFToLinalg/TCFToLinalg.h"
 #include "npcomp/Dialect/Numpy/Transforms/Passes.h"
 
 //===----------------------------------------------------------------------===//
@@ -151,6 +152,7 @@ void mlir::NPCOMP::Torch::createLowerToNpcompBackendPipeline(
 
   // Lower to linalg + guards which is the input to codegen backends.
   pm.addNestedPass<FuncOp>(createConvertTorchToLinalgPass());
+  pm.addNestedPass<FuncOp>(createConvertTCFToLinalgPass());
 
   // Verify that we have lowered to the form that backends expect.
   // This fails compilation (signalPassFailure) if the IR is not in the
