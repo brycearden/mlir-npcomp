@@ -220,6 +220,146 @@ LogicalResult convertLinearOp(AtenLinearOp op, PatternRewriter &rewriter) {
   return success();
 }
 
+// See comments at in convertMmOp and the heading for this section for general
+// considerations. This function needs to be auto-generated.
+LogicalResult convertConv2dOp(AtenConv2dOp op, PatternRewriter &rewriter) {
+  Location loc = op->getLoc();
+  Value input    = op.input();
+  Value weight   = op.weight();
+  Value bias     = op.bias();
+  Value stride   = op.stride();
+  Value padding  = op.padding();
+  Value dilation = op.dilation();
+  Value groups   = op.groups();
+  // TODO: Handle the case of bias being None (bias is optional).
+  if (failed(verifyLinalgCompatibleTypes(op, rewriter)))
+    return failure();
+  auto inputType = input.getType().cast<RankedTensorType>();
+  auto weightType = weight.getType().cast<RankedTensorType>();
+  auto biasType = bias.getType().cast<RankedTensorType>();
+  // Only handle the case of rank 4 `input`, NCHW format, for now.
+  // TODO: Insert the appropriate reshape to collapse any leading dimensions.
+  if (inputType.getRank() != 4 || weightType.getRank() != 4 ||
+      biasType.getRank() != 1) {
+    return rewriter.notifyMatchFailure(
+        op,
+        "expected both input and weight to be rank 4 and bias to be rank 1");
+  }
+  // TODO: Handle type promotion. What are ATen's promotion rules?
+  if (inputType.getElementType() != weightType.getElementType() ||
+      inputType.getElementType() != biasType.getElementType()) {
+    return rewriter.notifyMatchFailure(op, "unimplemented: type promotion");
+  }
+
+  // TODO: We can handle a static size 4 here at some complexity cost, but the
+  // dynamic case is not representable in linalg. We don't handle either for
+  // now. Biases are generally statically shaped for most models (since for
+  // inference they are constants, and for training they don't change shape
+  // typically), so this is not too constraining.
+  auto biasSize = bias.getType().cast<RankedTensorType>().getShape()[0];
+  if (biasSize == 4 || biasSize == ShapedType::kDynamicSize)
+    return rewriter.notifyMatchFailure(
+        op, "unimplemented: size-4 broadcasting for aten::Conv2dOp");
+
+  auto getDimOp = [&](Value v, int dimension) {
+    return rewriter.create<memref::DimOp>(loc, v, dimension);
+  };
+  Value inputDim0 = getDimOp(input, 0); // B
+  Value inputDim1 = getDimOp(input, 1); // Cin
+  Value inputDim2 = getDimOp(input, 2); // H
+  Value inputDim3 = getDimOp(input, 3); // W
+  Value weightDim0 = getDimOp(weight, 0); // Cout
+  Value weightDim1 = getDimOp(weight, 1); // Cin
+  Value weightDim2 = getDimOp(weight, 2); // KH
+  Value weightDim3 = getDimOp(weight, 3); // KW
+  Value biasDim0 = getDimOp(bias, 0);
+  Value contractingDimEqual =
+      rewriter.create<CmpIOp>(loc, CmpIPredicate::eq, inputDim1, weightDim1);
+  rewriter.create<AssertOp>(
+      loc, contractingDimEqual,
+      rewriter.getStringAttr(
+          "mismatching contracting dimension for aten.conv2d"));
+  Value validFilterH =
+      rewriter.create<CmpIOp>(loc, CmpIPredicate::uge, inputDim2, weightDim2);
+  rewriter.create<AssertOp>(
+      loc, validFilterH,
+      rewriter.getStringAttr(
+          "input height must be greater than or equal to filter KH-dimension"));
+  Value validFilterW =
+      rewriter.create<CmpIOp>(loc, CmpIPredicate::uge, inputDim3, weightDim3);
+  rewriter.create<AssertOp>(
+      loc, validFilterW,
+      rewriter.getStringAttr(
+          "input width must be greater than or equal to filter KW-dimension"));
+  // Here we take advantage of ruling out the size-4 case above.
+  // In the static-size-4 case, we will not emit this check at all.
+  Value biasSizeCorrect =
+      rewriter.create<CmpIOp>(loc, CmpIPredicate::eq, weightDim0, biasDim0);
+  rewriter.create<AssertOp>(
+      loc, biasSizeCorrect,
+      rewriter.getStringAttr("mismatching bias size for aten.conv2d"));
+
+  // Determine output shape.
+  // TODO: This only supports the NCHW data format. Consider other formats and lower ranks.
+  // TODO: Replace hard-coded stride/dilation/padding constant-ops.
+  Value cI1 = rewriter.create<ConstantOp>(op->getLoc(), rewriter.getIntegerAttr(rewriter.getIndexType(), 1));
+  Value cI2 = rewriter.create<ConstantOp>(op->getLoc(), rewriter.getIntegerAttr(rewriter.getIndexType(), 2));
+  //Value stride = cI1;
+  //Value dilation = cI1;
+  //Value padding = cI0;
+  Value strideHeight = stride;
+  Value strideWidth = stride;
+  Value dilationHeight = dilation;
+  Value dilationWidth = dilation;
+  Value paddingHeight = padding;
+  Value paddingWidth = padding;
+  // Output height
+  Value twicePaddingHeight = rewriter.create<MulIOp>(loc, paddingHeight, cI2);
+  Value heightPlusTwicePadding = rewriter.create<SubIOp>(loc, inputDim2, twicePaddingHeight);
+  Value filterHeightMinusOne = rewriter.create<SubIOp>(loc, weightDim2, cI1);
+  Value dilationFilterHeight = rewriter.create<MulIOp>(loc, dilationHeight, filterHeightMinusOne);
+  Value outHeightUnstridedPlusOne = rewriter.create<SubIOp>(loc, heightPlusTwicePadding, dilationFilterHeight);
+  Value outHeightUnstrided = rewriter.create<SubIOp>(loc, outHeightUnstridedPlusOne, cI1);
+  Value outHeightMinusOne = rewriter.create<UnsignedDivIOp>(loc, outHeightUnstrided, strideHeight);
+  Value outHeight = rewriter.create<AddIOp>(loc, outHeightMinusOne, cI1);
+  // Output width
+  Value twicePaddingWidth = rewriter.create<MulIOp>(loc, paddingWidth, cI2);
+  Value widthPlusTwicePadding = rewriter.create<SubIOp>(loc, inputDim3, twicePaddingWidth);
+  Value filterWidthMinusOne = rewriter.create<SubIOp>(loc, weightDim3, cI1);
+  Value dilationFilterWidth = rewriter.create<MulIOp>(loc, dilationWidth, filterWidthMinusOne);
+  Value outWidthUnstridedPlusOne = rewriter.create<SubIOp>(loc, widthPlusTwicePadding, dilationFilterWidth);
+  Value outWidthUnstrided = rewriter.create<SubIOp>(loc, outWidthUnstridedPlusOne, cI1);
+  Value outWidthMinusOne = rewriter.create<UnsignedDivIOp>(loc, outWidthUnstrided, strideWidth);
+  Value outWidth = rewriter.create<AddIOp>(loc, outWidthMinusOne, cI1);
+  // Output shape
+  ValueRange outputShape = ValueRange({inputDim0, weightDim0, outHeight, outWidth});
+  //Value outputShape = rewriter.create<tensor::FromElementsOp>(
+  //    loc, ValueRange({inputDim0, weightDim0, outHeight, outWidth}));
+
+  Value initTensor = rewriter.create<linalg::InitTensorOp>(
+      loc, outputShape, inputType.getElementType());
+  SmallVector<AffineMap> broadcastIndexingMaps = {
+      AffineMap::get(
+          /*dimCount=*/4, /*symbolCount=*/0, rewriter.getAffineDimExpr(1)),
+      rewriter.getMultiDimIdentityMap(4)};
+  SmallVector<StringRef> iteratorTypes(2, "parallel");
+  Value broadcasted = rewriter
+                          .create<linalg::GenericOp>(
+                              loc, initTensor.getType(), bias, initTensor,
+                              /*indexingMaps=*/broadcastIndexingMaps,
+                              /*iteratorTypes=*/iteratorTypes,
+                              [](OpBuilder &b, Location loc, ValueRange args) {
+                                b.create<linalg::YieldOp>(loc, args[0]);
+                              })
+                          .getResult(0);
+
+  Value conv2dNCHW = rewriter.create<linalg::ConvNCHWOp>(
+      op.getLoc(), TypeRange(op.getType()),
+      ValueRange({input, weight}), ValueRange(broadcasted)).getResult(0);
+  rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), conv2dNCHW);
+  return success();
+}
+
 namespace {
 // Converts a unary op. There is no implicit broadcasting behavior, so these can
 // be trivially lowered to linalg.
@@ -288,6 +428,7 @@ public:
     RewritePatternSet patterns(context);
     patterns.add(convertMmOp);
     patterns.add(convertLinearOp);
+    patterns.add(convertConv2dOp);
     patterns.add<ConvertUnaryOp>(context);
     return std::move(patterns);
   }
