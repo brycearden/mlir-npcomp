@@ -343,7 +343,7 @@ LogicalResult convertConv2dOp(AtenConv2dOp op, PatternRewriter &rewriter) {
       AffineMap::get(
           /*dimCount=*/4, /*symbolCount=*/0, rewriter.getAffineDimExpr(1)),
       rewriter.getMultiDimIdentityMap(4)};
-  SmallVector<StringRef> iteratorTypes(2, "parallel");
+  SmallVector<StringRef> iteratorTypes(4, "parallel");
   Value broadcasted = rewriter
                           .create<linalg::GenericOp>(
                               loc, initTensor.getType(), bias, initTensor,
