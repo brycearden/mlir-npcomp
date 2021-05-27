@@ -227,9 +227,9 @@ LogicalResult convertConv2dOp(AtenConv2dOp op, PatternRewriter &rewriter) {
   Value input    = op.input();
   Value weight   = op.weight();
   Value bias     = op.bias();
-  Value stride   = op.stride();
-  Value padding  = op.padding();
-  Value dilation = op.dilation();
+  //Value stride   = op.stride();
+  //Value padding  = op.padding();
+  //Value dilation = op.dilation();
   Value groups   = op.groups();
   // TODO: Handle the case of bias being None (bias is optional).
   if (failed(verifyLinalgCompatibleTypes(op, rewriter)))
@@ -302,11 +302,12 @@ LogicalResult convertConv2dOp(AtenConv2dOp op, PatternRewriter &rewriter) {
   // Determine output shape.
   // TODO: This only supports the NCHW data format. Consider other formats and lower ranks.
   // TODO: Replace hard-coded stride/dilation/padding constant-ops.
+  Value cI0 = rewriter.create<ConstantOp>(op->getLoc(), rewriter.getIntegerAttr(rewriter.getIndexType(), 0));
   Value cI1 = rewriter.create<ConstantOp>(op->getLoc(), rewriter.getIntegerAttr(rewriter.getIndexType(), 1));
   Value cI2 = rewriter.create<ConstantOp>(op->getLoc(), rewriter.getIntegerAttr(rewriter.getIndexType(), 2));
-  //Value stride = cI1;
-  //Value dilation = cI1;
-  //Value padding = cI0;
+  Value stride = cI1;
+  Value dilation = cI1;
+  Value padding = cI0;
   Value strideHeight = stride;
   Value strideWidth = stride;
   Value dilationHeight = dilation;
