@@ -231,9 +231,9 @@ LogicalResult convertConv2dOp(AtenConv2dOp op, PatternRewriter &rewriter) {
   //Value padding  = op.padding();
   //Value dilation = op.dilation();
   Value groups   = op.groups();
-  // TODO: Handle the case of bias being None (bias is optional).
-  if (failed(verifyLinalgCompatibleTypes(op, rewriter)))
-    return failure();
+  //// TODO: Handle the case of bias being None (bias is optional).
+  //if (failed(verifyLinalgCompatibleTypes(op, rewriter)))
+  //  return failure();
   auto inputType = input.getType().cast<RankedTensorType>();
   auto weightType = weight.getType().cast<RankedTensorType>();
   auto biasType = bias.getType().cast<RankedTensorType>();
@@ -251,15 +251,15 @@ LogicalResult convertConv2dOp(AtenConv2dOp op, PatternRewriter &rewriter) {
     return rewriter.notifyMatchFailure(op, "unimplemented: type promotion");
   }
 
-  // TODO: We can handle a static size 4 here at some complexity cost, but the
-  // dynamic case is not representable in linalg. We don't handle either for
-  // now. Biases are generally statically shaped for most models (since for
-  // inference they are constants, and for training they don't change shape
-  // typically), so this is not too constraining.
-  auto biasSize = bias.getType().cast<RankedTensorType>().getShape()[0];
-  if (biasSize == 4 || biasSize == ShapedType::kDynamicSize)
-    return rewriter.notifyMatchFailure(
-        op, "unimplemented: size-4 broadcasting for aten::Conv2dOp");
+  //// TODO: We can handle a static size 4 here at some complexity cost, but the
+  //// dynamic case is not representable in linalg. We don't handle either for
+  //// now. Biases are generally statically shaped for most models (since for
+  //// inference they are constants, and for training they don't change shape
+  //// typically), so this is not too constraining.
+  //auto biasSize = bias.getType().cast<RankedTensorType>().getShape()[0];
+  //if (biasSize == 4 || biasSize == ShapedType::kDynamicSize)
+  //  return rewriter.notifyMatchFailure(
+  //      op, "unimplemented: size-4 broadcasting for aten::Conv2dOp");
 
   auto getDimOp = [&](Value v, int dimension) {
     return rewriter.create<memref::DimOp>(loc, v, dimension);
